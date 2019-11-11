@@ -1,4 +1,5 @@
 {
   "viewportHeight": 1000,
-  "viewportWidth": 1000
+  "viewportWidth": 1000,
+  "chromeWebSecurity": false
 }

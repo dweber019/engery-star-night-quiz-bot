@@ -1,22 +1,23 @@
-let answerJson = require('./../fixtures/esn-questions.json');
+let answerJson = require('./../fixtures/esn-questions-2019.json');
 
 const { _, $ } = Cypress
-let maxTrys = 100;
+let maxTrys = 50;
 let noMoreGames = false;
 
 describe('Make quiz', function () {
 
   before(function () {
     Cypress.Cookies.defaults({
-      whitelist: ["jwt-token", 'XSRF-TOKEN', '_ga', '_gid', 'energy_game_session', 'i00', 'srp']
+      whitelist: ['XSRF-TOKEN', '_ga', '_gid', 'energy_game_session', 'i00', 'id', 'DSID', '_gat', '_hjid', 'access_token']
     });
-    cy.setCookie('jwt-token', '')
-  })
+  });
 
   it('Open ESN', function () {
     cy.visit('https://game.energy.ch/');
-    cy.title().should('include', 'Energy Star Night - The Game');
-  })
+    cy.title().should('include', 'Energy The Game');
+    cy.pause();
+    cy.get('button').contains('Game starten').click();
+  });
 
   for (let i = 0; i < maxTrys; i++) {
     doQuizContainer();
@@ -70,17 +71,18 @@ function doQuizContainer() {
     cy.get('.ticket-slot').click();
   });
 
-  it('Select first monkey', function () {
+  it('Select first', function () {
     const randomNumber = Math.floor(Math.random() * 12);
     cy.get('.circle:eq(' + randomNumber + ')').click();
   });
 
   it('Lose?', function () {
-    cy.get('.esn-special-screen > h1').invoke('text').then((finalTitle) => {
+    cy.get('.container-fluid > h1').invoke('text').then((finalTitle) => {
       cy.log('Final Title: ' + finalTitle);
       if (finalTitle == 'Leider verloren') {
         if (!noMoreGames) {
-          cy.get('.game-button').click();
+          cy.wait(30000);
+          cy.get('button').contains('Neustart').click();
         }
       } else {
         noMoreGames = true;
@@ -92,7 +94,7 @@ function doQuizContainer() {
 
 function doQuiz(next) {
 
-  return cy.get('.questions h3').invoke('text').then((questionTitle) => {
+  return cy.get('.questions .question-text').invoke('text').then((questionTitle) => {
     cy.log('Question is: ' + questionTitle);
 
     let answer = getAnswer(questionTitle);
@@ -105,27 +107,18 @@ function doQuiz(next) {
       _.each($radios.get(), function (el, i) {
         cy.log('Antwort ' + i + ': ' + el.id + ' / ' + answer);
 
-        if (questionTitle === 'Wie heisst dieser Superheld?') {
-          if (answer.indexOf(el.id) >= 0) {
-            cy.get('[id="' + el.id + '"]').check();
-          }
-        } else {
-          if (el.id == answer) {
-            cy.get('[id="' + el.id + '"]').check();
-          }
+        if (el.id == answer) {
+          cy.get('[id="' + el.id + '"]').check({force: true});
+          cy.wait(150);
+          cy.get('button').contains('Weiter').click();
         }
       });
-    }).then(() => {
-      if (next) {
-        cy.log('Click next')
-        cy.get('#next-question').click()
-      }
     });
 
   });
 }
 
 function getAnswer(question) {
-  let questionItem = answerJson.find(item => item.question === question);
+  let questionItem = answerJson.find(item => item.question.toLowerCase() === question.toLowerCase());
   return questionItem.answer;
 }
